@@ -3,7 +3,7 @@ import numpy as np
 from glob import glob
 import os
 
-Parameters = './SimulationParameters.txt'
+Parameters = './AnalysisParameters.dat'
 pf = pd.read_csv(Parameters, delimiter='\s', header=0, engine='python')
 Nx = pf['Nx'].to_numpy()[0]
 Ny = pf['Ny'].to_numpy()[0]
@@ -19,7 +19,7 @@ TOTAL_TIME = pf['TOTAL_TIME'].to_numpy()[0]
 DISK_TIME = pf['DISK_TIME'].to_numpy()[0]
 
 TOTAL_TIME = DISK_TIME * len(glob(os.getcwd()+'/data/*.dat'))
-time_steps = TOTAL_TIME / DISK_TIME
+time_steps = int(TOTAL_TIME / DISK_TIME)
 shape = (Ny, Nx, Nz)
 temporal_shape = (time_steps, Ny, Nx, Nz)
 
@@ -27,17 +27,11 @@ density = np.zeros(temporal_shape)
 vel_x = np.zeros(temporal_shape)
 vel_y = np.zeros(temporal_shape)
 vel_z = np.zeros(temporal_shape)
-
 Q_xx = np.zeros(temporal_shape)
 Q_yy = np.zeros(temporal_shape)
 Q_xy = np.zeros(temporal_shape)
 Q_yz = np.zeros(temporal_shape)
 Q_xz = np.zeros(temporal_shape)
-
-scalar_order_parameter = np.zeros(temporal_shape)
-director_x = np.zeros(temporal_shape)
-director_y = np.zeros(temporal_shape)
-director_z = np.zeros(temporal_shape)
 
 density_Temp = np.zeros(shape)
 vel_x_Temp = np.zeros(shape)
@@ -49,8 +43,8 @@ Q_xy_Temp = np.zeros(shape)
 Q_yz_Temp = np.zeros(shape)
 Q_xz_Temp = np.zeros(shape)
 
-for t in range(time_steps):
-    data_file = 'data/fluid_t%d.dat' %((t+1) * DISK_TIME)
+for t in range(1,time_steps+1):
+    data_file = 'data/fluid_t%d.dat' %(t * DISK_TIME)
     df = pd.read_csv(data_file, delimiter='\s', header=0, engine='python') 
 
     # read in with delimiter of one-space separation
@@ -65,30 +59,14 @@ for t in range(time_steps):
     Q_yz_Temp = np.reshape(df['Q_yz'].to_numpy(), shape)
     Q_xz_Temp = np.reshape(df['Q_xz'].to_numpy(), shape)
 
-    density[t] = density_Temp
-    vel_x[t] = vel_x_Temp
-    vel_y[t] = vel_y_Temp
-    vel_z[t] = vel_z_Temp
-    Q_xx[t] = Q_xx_Temp
-    Q_yy[t] = Q_yy_Temp
-    Q_xy[t] = Q_xy_Temp
-    Q_yz[t] = Q_yz_Temp
-    Q_xz[t] = Q_xz_Temp
-
-    for X in range(Nx):
-       for Y in range(Ny):
-              for Z in range(Nz):
-                     Q_total = np.array([[Q_xx[X,Y,Z], Q_xy[X,Y,Z], Q_xz[X,Y,Z]],
-                                          [Q_xy[X,Y,Z], Q_yy[X,Y,Z], Q_yz[X,Y,Z]],
-                                          [Q_xz[X,Y,Z], Q_yz[X,Y,Z], -Q_xx[X,Y,Z]-Q_yy[X,Y,Z]]])
-                     eigs = np.linalg.eig(Q_total)
-
-                     scalar_order_parameter[X,Y,Z] = np.max(eigs[0])    # maximum eigenvalue
-                     director_x[X,Y,Z] = eigs[1][0,np.argmax(eigs[0])]  # nx
-                     director_y[X,Y,Z] = eigs[1][1,np.argmax(eigs[0])]  # ny
-                     director_z[X,Y,Z] = eigs[1][2,np.argmax(eigs[0])]  # nz
-
-    
-    
+    density[t-1] = density_Temp
+    vel_x[t-1] = vel_x_Temp
+    vel_y[t-1] = vel_y_Temp
+    vel_z[t-1] = vel_z_Temp
+    Q_xx[t-1] = Q_xx_Temp
+    Q_yy[t-1] = Q_yy_Temp
+    Q_xy[t-1] = Q_xy_Temp
+    Q_yz[t-1] = Q_yz_Temp
+    Q_xz[t-1] = Q_xz_Temp
 
 np.savez_compressed('Data.npz')

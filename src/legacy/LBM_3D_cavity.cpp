@@ -68,30 +68,30 @@
 int Nx; // = 61; // number of lattice nodes along the x-axis (including two wall nodes)
 int Ny; // = 61; // number of lattice nodes along the y-axis (including two wall nodes)
 int Nz; // = 11; // number of lattice nodes along the z-axis (including two wall nodes)
-
 int t_num; // = 6000; // number of time steps (running from 1 to t_num)
-int t_disk; // disk write time step (data will be written to the disk every t_disk step)
-
-double tau; // relaxation time
 double vel_back; // = 5e-4; // velocity of the back wall (in positive x-direction)
-
-double Gamma; // = 2; // relaxation time for Q (have to be much larger than tau)
+double Gamma; // = 2; // relaxation time for Q (have to be much smaller than tau)
 double L; // = 0.001; // Frank constant for one-constant approximation of elastic free energy
 double U; // = 0.7; // controls isotropic-nematic transition, at U = 1 (above nematic, below isotropic)
 double zeta; // = 0; // activity parameter
 double A; // = 1e-4; // controls strength of nematic ordering
-double xi; // flow aligning parameter
 
 double a; // free energy parameter in Q^2 term
 double b; // free energy parameter in Q^3 term
 double c; // free energy parameter in Q^4 term
 
-double omega; // relaxation frequency (inverse of relaxation time)
+
+const double tau = 0.9; // relaxation time
+const int t_disk = 1000; // disk write time step (data will be written to the disk every t_disk step)
+const int t_info = 1000; // info time step (screen message will be printed every t_info step)
+const double nu = (tau - 0.5) / 3; // viscosity
+const double xi = 1; // flow aligning parameter
 
 // ***************************************
 // DECLARE ADDITIONAL VARIABLES AND ARRAYS
 // ***************************************
 
+const double omega = 1. / tau; // relaxation frequency (inverse of relaxation time)
 double ****pop, ****pop_old; // LBM populations (old and new)
 double ***density; // fluid density
 double ***velocity_x; // fluid velocity (x-component)
@@ -111,7 +111,6 @@ const double weight[15] = {2./9., 1./9., 1./9., 1./9., 1./9., 1./9., 1./9., 1./7
 // *****************
 
 void initialize(); // allocate memory and initialize variables
-void read_parameters(); // read in simulation parameters
 void LBM(); // perform LBM operations
 void Q_evolution(); // perform Euler integration
 void force(); // compute force from Q configuration
@@ -132,14 +131,26 @@ void write_fluid_profile(int); // write lattice velocity profile to disk
 // 5) update node positions
 // 6) if desired, write data to disk and report status
 
-int main() {
+int main( int argc, char *argv[]) {
+
+  if ( argc != 11 ) // argc should be 11 for correct execution
+    // We print argv[0] assuming it is the program name
+    std::cout<<"usage: "<< argv[0] <<" <Nx> <Ny> <Nz> <t_num> <vel_back> <Gamma> <L> <U> <A> <zeta>\n";
+  else {
+    Nx = atoi(argv[1]); // number of lattice nodes along the x-axis (including two wall nodes)
+    Ny = atoi(argv[2]); // number of lattice nodes along the y-axis (including two wall nodes)
+    Nz = atoi(argv[3]); // number of lattice nodes along the z-axis (including two wall nodes)
+    t_num = atoi(argv[4]); // number of time steps (running from 1 to t_num)
+    vel_back = atof(argv[5]); // velocity of the back wall (in positive x-direction)
+    Gamma = atof(argv[6]); // relaxation frequency for Q (AGamma have to be much smaller than 1)
+    L = atof(argv[7]); // Frank constant for one-constant approximation of elastic free energy
+    U = atof(argv[8]); // controls isotropic-nematic transition, at U = 1 (above nematic, below isotropic)
+    A = atof(argv[9]); // controls strength of nematic ordering
+    zeta = -atof(argv[10]); // activity parameter
+  }
 
   initialize(); // allocate memory and initialize variables
-  
-  // std::cout << "Nx: " << Nx << " , Ny: " << Ny << " , Nz: " << Nz << std::endl;
-  // std::cout << "t_num: " << t_num << " , t_disk: " << t_disk << " , tau: " << tau << std::endl;
-  // std::cout << "L: " << L << " , A: " << A << " , U: " << U << std::endl;
-  // std::cout << "vel_back: " << vel_back << " , Gamma: " << Gamma << " , zeta: " << zeta << std::endl;
+
   // std::cout << "a: " << a << " , b: " << b << " , c: " << c << std::endl;
 
   const auto start = std::chrono::high_resolution_clock::now(); // start clock
@@ -189,9 +200,21 @@ void initialize() {
   ignore = system("mkdir -p data"); // create folder if not existing
   ignore = system("rm -f data/fluid_t*.dat"); // delete file if existing
 
+  // write AnalysisParameters file
+  std::stringstream output_filename;
+  output_filename << "AnalysisParameters.dat";
+  std::ofstream output_file;
+  output_file.open(output_filename.str().c_str());
+  
+  // Write Parameters.
+  output_file << "Nx Ny Nz VISCOSITY LID_SPEED GAMMA ZETA NEMATIC_DENSITY NEMATIC_STRENGTH FRANK_CONSTANT TOTAL_TIME DISK_TIME\n";
+  output_file << Nx << " " << Ny << " " << Nz << " " << nu << " " << vel_back << " " << Gamma << " " << zeta << " " << A << " " << U << " " << L << " " << t_num << " " << t_disk << "\n";
 
-  read_parameters(); // Read in simulation parameters
+  output_file.close();
 
+  a = A * 3. * (1 - U) / 2; // free energy parameter in Q^2 term
+  b = A * 9. * U / 2; // free energy parameter in Q^3 term
+  c = A * 9. * U; // free energy parameter in Q^4 term
   
   // Allocate memory for the fluid density, velocity, and force, and director
   // Initialize the fluid density and velocity. Start with unit density and zero velocity.
@@ -326,53 +349,6 @@ void initialize() {
       }
     }
   }
-
-  return;
-}
-
-void read_parameters() {
-
-  std::string myValues[13];
-  std::string myObjects[13];
-
-  std::string inFileName = "SimulationParameters.txt";
-  std::ifstream inFile;
-  inFile.open(inFileName.c_str());
-
-  if (inFile.is_open())  
-  {  
-      inFile.ignore ( std::numeric_limits<std::streamsize>::max(), '\n' );
-      for (int i = 0; i < 13; i++) 
-      {
-          std::getline(inFile, myValues[i], ' ');
-      }
-      inFile.close(); // CLose input file
-  }
-  else { //Error message
-      std::cerr << "Can't find input file " << inFileName << std::endl;
-  }
-
-  Nx = stoi(myValues[0]); // number of lattice nodes along the x-axis (including two wall nodes)
-  Ny = stoi(myValues[1]); // number of lattice nodes along the y-axis (including two wall nodes)
-  Nz = stoi(myValues[2]); // number of lattice nodes along the z-axis (including two wall nodes)
-
-  t_num = stoi(myValues[3]); // number of time steps (running from 1 to t_num)
-  t_disk = stoi(myValues[4]);
-  tau = stof(myValues[5]);
-
-  vel_back = stof(myValues[6]); // velocity of the back wall (in positive x-direction)
-  Gamma = stof(myValues[7]); // relaxation frequency for Q (AGamma have to be much smaller than 1)
-  L = stof(myValues[8]); // Frank constant for one-constant approximation of elastic free energy
-  U = stof(myValues[9]); // controls isotropic-nematic transition, at U = 1 (above nematic, below isotropic)
-  A = stof(myValues[10]); // controls strength of nematic ordering
-  zeta = -stof(myValues[11]); // activity parameter
-  xi = stof(myValues[12]); // flow aligning parameter
-
-  a = A * 3. * (1 - U) / 2; // free energy parameter in Q^2 term
-  b = A * 9. * U / 2; // free energy parameter in Q^3 term
-  c = A * 9. * U; // free energy parameter in Q^4 term
-
-  omega = 1. / tau; // relaxation frequency (inverse of relaxation time)
 
   return;
 }

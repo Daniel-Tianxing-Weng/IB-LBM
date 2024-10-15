@@ -11,7 +11,7 @@
 scp analysis/analysis_correlation.py $1/analysis_correlation.py
 scp analysis/analysis_nematic.py $1/analysis_nematic.py
 scp analysis/organize_data.py $1/organize_data.py
-scp analysis/plotter.py $1/plotter.py
+# scp analysis/plotter.py $1/plotter.py
 
 source .venv/bin/activate
 
