@@ -5,21 +5,25 @@ import os
 
 Parameters = './SimulationParameters.txt'
 pf = pd.read_csv(Parameters, delimiter='\s', header=0, engine='python')
-Nx = pf['Nx'].to_numpy()[0]
-Ny = pf['Ny'].to_numpy()[0]
-Nz = pf['Nz'].to_numpy()[0]
+Nx = int(pf['Nx'].to_numpy()[0])
+Ny = int(pf['Ny'].to_numpy()[0])
+Nz = int(pf['Nz'].to_numpy()[0])
 LID_SPEED = pf['LID_SPEED'].to_numpy()[0]
-VISCOSITY = pf['VISCOSITY'].to_numpy()[0]
+
+t_lbm = pf['LBM_TIME'].to_numpy()[0]
+VISCOSITY = (t_lbm - 0.5) / 3
+
 GAMMA = pf['GAMMA'].to_numpy()[0]
 ZETA = pf['ZETA'].to_numpy()[0]
 NEMATIC_DENSITY = pf['NEMATIC_DENSITY'].to_numpy()[0]
 NEMATIC_STRENGTH = pf['NEMATIC_STRENGTH'].to_numpy()[0]
 FRANK_CONSTANT = pf['FRANK_CONSTANT'].to_numpy()[0]
+
 TOTAL_TIME = pf['TOTAL_TIME'].to_numpy()[0]
 DISK_TIME = pf['DISK_TIME'].to_numpy()[0]
 
 TOTAL_TIME = DISK_TIME * len(glob(os.getcwd()+'/data/*.dat'))
-time_steps = TOTAL_TIME / DISK_TIME
+time_steps = int(TOTAL_TIME / DISK_TIME)
 shape = (Ny, Nx, Nz)
 temporal_shape = (time_steps, Ny, Nx, Nz)
 
@@ -78,17 +82,27 @@ for t in range(time_steps):
     for X in range(Nx):
        for Y in range(Ny):
               for Z in range(Nz):
-                     Q_total = np.array([[Q_xx[X,Y,Z], Q_xy[X,Y,Z], Q_xz[X,Y,Z]],
-                                          [Q_xy[X,Y,Z], Q_yy[X,Y,Z], Q_yz[X,Y,Z]],
-                                          [Q_xz[X,Y,Z], Q_yz[X,Y,Z], -Q_xx[X,Y,Z]-Q_yy[X,Y,Z]]])
+                     Q_total = np.array([[Q_xx_Temp[X,Y,Z], Q_xy_Temp[X,Y,Z], Q_xz_Temp[X,Y,Z]],
+                                          [Q_xy_Temp[X,Y,Z], Q_yy_Temp[X,Y,Z], Q_yz_Temp[X,Y,Z]],
+                                          [Q_xz_Temp[X,Y,Z], Q_yz_Temp[X,Y,Z], -Q_xx_Temp[X,Y,Z]-Q_yy_Temp[X,Y,Z]]])
                      eigs = np.linalg.eig(Q_total)
 
-                     scalar_order_parameter[X,Y,Z] = np.max(eigs[0])    # maximum eigenvalue
-                     director_x[X,Y,Z] = eigs[1][0,np.argmax(eigs[0])]  # nx
-                     director_y[X,Y,Z] = eigs[1][1,np.argmax(eigs[0])]  # ny
-                     director_z[X,Y,Z] = eigs[1][2,np.argmax(eigs[0])]  # nz
+                     scalar_order_parameter[t,X,Y,Z] = np.max(eigs[0])    # maximum eigenvalue
+                     director_x[t,X,Y,Z] = eigs[1][0,np.argmax(eigs[0])]  # nx
+                     director_y[t,X,Y,Z] = eigs[1][1,np.argmax(eigs[0])]  # ny
+                     director_z[t,X,Y,Z] = eigs[1][2,np.argmax(eigs[0])]  # nz
 
     
     
 
-np.savez_compressed('Data.npz')
+np.savez_compressed('Data.npz', 
+                    Nx=Nx, Ny=Ny, Nz=Nz, 
+                    VISCOSITY=VISCOSITY, GAMMA=GAMMA, 
+                    LID_SPEED=LID_SPEED, ZETA=ZETA,
+                    FRANK_CONSTANT=FRANK_CONSTANT, 
+                    NEMATIC_DENSITY=NEMATIC_DENSITY,
+                    
+                    density=density,
+                    vel_x=vel_x, vel_y=vel_y, vel_z=vel_z,
+                    S=scalar_order_parameter, nx=director_x, ny=director_y, nz=director_z
+                    )

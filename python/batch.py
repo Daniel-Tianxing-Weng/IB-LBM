@@ -8,7 +8,7 @@ import os
 
 DIR = 'test'
 
-for N in [60]:
+for N in [20]:
 
     for j in range(1):
 
@@ -29,7 +29,7 @@ for N in [60]:
             # System Geometry
             Nx = N + 1
             Ny = N + 1
-            Nz = int(N / 6) + 1
+            Nz = N + 1
 
             # Simulation timescale
             t_num = 6000
@@ -37,7 +37,7 @@ for N in [60]:
             t_lbm = 0.9
 
             # Controlled parameters
-            vel_back = (t_lbm - 0.5) * 3 * Re / N
+            vel_back =  3 * Re / ((t_lbm - 0.5) * N)
             # print(vel_back)
             Gamma = 100
             L = 3e-6
