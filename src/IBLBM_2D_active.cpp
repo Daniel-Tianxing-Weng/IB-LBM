@@ -64,6 +64,14 @@ double gravity; // force density due to gravity (in positive x-direction)
 double vel_bot; // velocity of the bottom wall (in positive x-direction)
 double vel_top; // velocity of the top wall (in positive x-direction)
 
+// LC properties
+double Gamma; // = 2; // relaxation time for Q (have to be much larger than tau)
+double L; // = 0.001; // Frank constant for one-constant approximation of elastic free energy
+double U; // = 0.7; // controls isotropic-nematic transition, at U = 1 (above nematic, below isotropic)
+double zeta; // = 0; // activity parameter
+double A; // = 1e-4; // controls strength of nematic ordering
+double xi; // flow aligning parameter
+
 // IBM properties
 // Note that bounce-back is used for the outermost lattice nodes, so the width of the channel "wall_width" should be smaller than Ny - 2.
 int IBM_stencil; // interpolation stencil; available values: 2, 4
@@ -131,6 +139,8 @@ double **velocity_x; // fluid velocity (x-component)
 double **velocity_y; // fluid velocity (y-component)
 double **force_x; // fluid force (x-component)
 double **force_y; // fluid force (y-component)
+double **Q_xx; // LC order parameter (xx)
+double **Q_xy; // LC order parameter (xy)
 double force_latt[9]; // lattice force term entering the lattice Boltzmann equation
 double pop_eq[9]; // equilibrium populations
 const double weight[9] = {4./9., 1./9., 1./9., 1./9., 1./9., 1./36., 1./36., 1./36., 1./36.}; // lattice weights
@@ -143,6 +153,8 @@ vector<IBM_object> boundaries; // immersed boundary objects
 void initialize(); // allocate memory and initialize variables
 void read_parameters(); // read in simulation parameters
 void LBM(); // perform LBM operations
+void Q_evolution(); // perform Euler integration
+void force(); // compute force from Q configuration
 void momenta(); // compute fluid density and velocity from the populations
 void equilibrium(double, double, double); // compute the equilibrium populations from the fluid density and velocity
 void compute_particle_forces(vector<IBM_object>&); // compute the forces acting on the object nodes

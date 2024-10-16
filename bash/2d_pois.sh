@@ -22,13 +22,12 @@
 WORKING_DIR="../Data/${1}/${2}"
 mkdir -p $WORKING_DIR
 
-# echo $WORKING_DIR
-# echo ${12}
+mv temp/${2}/SimulationParameters.txt $WORKING_DIR/SimulationParameters.txt
 
-g++ -std=c++17 -o $WORKING_DIR/2DIBLBM src/IBLBM_2D_Poseuille.cpp
+g++ -std=c++17 -o $WORKING_DIR/2DIBLBM ./src/IBLBM_2D_Poiseuille.cpp
 cd $WORKING_DIR
 ./2DIBLBM
 
 cd ../../../IB-LBM
-bash bash/analysis.sh $WORKING_DIR
+# bash bash/analysis.sh $WORKING_DIR
 # sbatch analysis.sh $WORKING_DIR
