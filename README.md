@@ -28,11 +28,11 @@ After the repo is cloned, make directory to store the generated data,
 
 Additionally, configure the virtual environment
 
-`cd ~
-module load python
-python -m venv .venv
-source .venv/bin/activate
-pip install numpy matplotlib pandas jupyter`
+`cd ~`
+`module load python`
+`python -m venv .venv`
+`source .venv/bin/activate`
+`pip install numpy matplotlib pandas jupyter`
 
 Then in VSCode, manually enter path for python interpreter `/home/.venv/bin/python`
 for Jupyter notebook to run on the kernel.
